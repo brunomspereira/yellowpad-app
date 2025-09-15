@@ -26,7 +26,6 @@ export class ClauseInserter {
 				}
 			}
 
-			// Generate new document if all jobs succeeded
 			let processedDocumentBuffer: Buffer | undefined;
 			if (results.every((r) => r.status === "success")) {
 				processedDocumentBuffer = await this.generateProcessedDocument(
@@ -73,7 +72,6 @@ export class ClauseInserter {
 			};
 		}
 
-		// Determine new section number
 		const newSectionNumber = this.calculateNewSectionNumber(
 			document.sections,
 			insertionPoint,
@@ -95,7 +93,6 @@ export class ClauseInserter {
 	private findInsertionPoint(sections: any[], instruction: string): number {
 		const lowerInstruction = instruction.toLowerCase();
 
-		// Match explicit targets like: section 4.1, section 4.A, section 4(a)
 		const sectionRegex =
 			/section\s+([\dA-Z]+(?:[\.\-][\dA-Z]+)*|\d+\s*\([a-zA-Z]\))/i;
 		const m = instruction.match(sectionRegex);
@@ -132,7 +129,6 @@ export class ClauseInserter {
 			return bestIndex + 1;
 		}
 
-		// Fallback: operate relative to the broader section group (e.g., "4")
 		const baseSection = targetParts[0];
 		const groupStart = sections.findIndex(
 			(s: any) => s.number.split(".")[0].toUpperCase() === baseSection
@@ -147,9 +143,9 @@ export class ClauseInserter {
 		}
 
 		if (lowerInstruction.includes("before")) {
-			return groupStart; // insert before the group
+			return groupStart;
 		}
-		return groupEnd + 1; // default/after -> after the group
+		return groupEnd + 1; 
 	}
 
 	private calculateNewSectionNumber(
@@ -157,7 +153,7 @@ export class ClauseInserter {
 		insertionPoint: number,
 		instruction: string
 	): string {
-		// Prefer explicit number in instruction (supports letters)
+
 		const instructionMatch = instruction.match(
 			/as section\s+([\dA-Z]+(?:\.[\dA-Z]+)*)/i
 		);
@@ -165,12 +161,9 @@ export class ClauseInserter {
 			return instructionMatch[1];
 		}
 
-		// Fallback: calculate based on position
-		// Fallback: increment within the top-level group
 		const prev = sections[Math.max(0, insertionPoint - 1)];
 		if (prev) {
 			const top = prev.number.split(".")[0];
-			// If inserting right after a top-level heading without explicit numbering, default to next sibling
 			return `${top}`;
 		}
 
@@ -181,20 +174,17 @@ export class ClauseInserter {
 		document: ParsedDocument,
 		results: InsertionJob[]
 	): Promise<Buffer> {
-		// Create new Word document with insertions
 		const doc = new Document({
 			sections: [
 				{
 					properties: {},
 					children: [
-						// Add original sections with insertions only, no synthetic header
 						...this.buildDocumentContent(document, results),
 					],
 				},
 			],
 		});
 
-		// Generate buffer
 		return (await Packer.toBuffer(doc)) as Buffer;
 	}
 
@@ -208,7 +198,6 @@ export class ClauseInserter {
 		for (let i = 0; i < document.sections.length; i++) {
 			const section = document.sections[i];
 
-			// Insert any clauses scheduled at this boundary (before section i)
 			const beforeInsertions = successfulInsertions.filter(
 				(ins) => ins.insertionPoint === i
 			);
@@ -217,7 +206,6 @@ export class ClauseInserter {
 				paragraphs.push(new Paragraph({ text: "" }));
 			}
 
-			// Add original section heading with document style
 			paragraphs.push(
 				new Paragraph({
 					children: [
@@ -249,7 +237,6 @@ export class ClauseInserter {
 			paragraphs.push(new Paragraph({ text: "" }));
 		}
 
-		// Handle insertions after the last section (insertionPoint === sections.length)
 		const tailInsertions = successfulInsertions.filter(
 			(ins) => ins.insertionPoint === document.sections.length
 		);
@@ -265,7 +252,6 @@ export class ClauseInserter {
 		insertion: InsertionJob,
 		document: ParsedDocument
 	): Paragraph {
-		// Determine if the clause already carries its own heading/number
 		const clauseTrim = insertion.clause.trim();
 		const clauseHasNumber = /^(\d+(?:\.[\dA-Z]+)*|[A-Z])\./.test(clauseTrim);
 		const sectionNumber =
@@ -273,7 +259,6 @@ export class ClauseInserter {
 			this.extractExplicitSectionNumber(insertion.instruction);
 
 		if (clauseHasNumber) {
-			// Render clause as-is with body style to avoid duplicate headings
 			return new Paragraph({
 				children: [
 					new TextRun({
@@ -285,7 +270,6 @@ export class ClauseInserter {
 			});
 		}
 
-		// Otherwise, render heading number then clause text
 		const headingNumber = sectionNumber || "";
 		return new Paragraph({
 			children: [
@@ -320,7 +304,6 @@ export class ClauseInserter {
 	}
 
 	private toHalfPoints(pointSize: string): number | undefined {
-		// Convert CSS-like "12pt" into half-points used by docx (24)
 		const m = pointSize.match(/^(\d+(?:\.\d+)?)pt$/i);
 		if (!m) return undefined;
 		return Math.round(parseFloat(m[1]) * 2);
