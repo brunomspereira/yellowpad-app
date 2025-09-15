@@ -7,7 +7,7 @@ This document outlines where my time was spent during the development of the pro
 ## Total Time Spent
 
 **2 hours 30 minutes**
-30 minutes were on setup and testing
+30 minutes were on setup and testing\
 
 ---
 
